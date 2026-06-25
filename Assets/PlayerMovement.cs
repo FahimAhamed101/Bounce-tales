@@ -165,8 +165,16 @@ public class PlayerMovement : MonoBehaviour
         Bounds bounds = circleCollider.bounds;
         Vector2 origin = new Vector2(bounds.center.x, bounds.min.y);
         Vector2 size = new Vector2(bounds.size.x * 0.85f, 0.05f);
-        RaycastHit2D hit = Physics2D.BoxCast(origin, size, 0f, Vector2.down, groundCheckDistance, groundLayer);
-        isGrounded = hit.collider != null;
+        RaycastHit2D[] hits = Physics2D.BoxCastAll(origin, size, 0f, Vector2.down, groundCheckDistance, groundLayer);
+        isGrounded = false;
+        foreach (var hit in hits)
+        {
+            if (hit.collider != null && hit.collider != circleCollider && !hit.collider.isTrigger)
+            {
+                isGrounded = true;
+                break;
+            }
+        }
     }
 
     private void AnimateVisual()

@@ -23,6 +23,13 @@ public class BounceGameBootstrap : MonoBehaviour
     private Sprite leftRightButtonSprite;
     private Sprite goalFlagSprite;
 
+    // Reset statics when domain reload is disabled (Unity 6 default)
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        initialized = false;
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void AutoBootstrap()
     {
@@ -31,9 +38,38 @@ public class BounceGameBootstrap : MonoBehaviour
             return;
         }
 
+        // Clean up any stale objects from a previous play session
+        CleanupStaleObjects();
+
         GameObject bootstrapObject = new GameObject("BounceGameBootstrap");
         bootstrapObject.AddComponent<BounceGameBootstrap>();
         initialized = true;
+    }
+
+    private static void CleanupStaleObjects()
+    {
+        string[] staleNames = {
+            "BounceGameBootstrap", "Bounce", "Ground", "HUD", "TouchControls",
+            "BounceGameManager", "EventSystem", "Background", "SkyTreesBack",
+            "SkyTreesFront", "Cloud", "Flower", "ArrowSign",
+            "PlatformA", "PlatformB", "PlatformC", "PlatformD", "PlatformE", "PlatformF",
+            "PlatformA_Backfill", "PlatformB_Backfill", "PlatformC_Backfill",
+            "PlatformD_Backfill", "PlatformE_Backfill", "PlatformF_Backfill",
+            "PitHazard", "PitHazard2", "Egg", "GoalPole", "GoalFlag",
+            "TreeNearStart", "TreeMid", "TreeNearGoal"
+        };
+
+        foreach (string objName in staleNames)
+        {
+            GameObject[] found = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Include);
+            foreach (GameObject go in found)
+            {
+                if (go != null && go.name == objName)
+                {
+                    DestroyImmediate(go);
+                }
+            }
+        }
     }
 
     private void Awake()
@@ -53,6 +89,7 @@ public class BounceGameBootstrap : MonoBehaviour
         mainCamera.orthographic = true;
         mainCamera.orthographicSize = 5.5f;
         mainCamera.backgroundColor = new Color(0.21f, 0.64f, 0.88f);
+        mainCamera.clearFlags = CameraClearFlags.SolidColor;
 
         CreateBackground();
         PlayerMovement player = CreatePlayer();
@@ -203,13 +240,14 @@ public class BounceGameBootstrap : MonoBehaviour
 
         Canvas canvas = new GameObject("TouchControls", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster)).GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
 
         CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
 
-        bool showControls = Application.isMobilePlatform || Touchscreen.current != null;
-        canvas.gameObject.SetActive(showControls);
+        // Always show controls on all platforms so they work in editor too
+        canvas.gameObject.SetActive(true);
 
         CreateButton(canvas.transform, player, MobileControlButton.ControlType.Left, leftRightButtonSprite, "<", new Vector2(170f, 170f), new Vector2(170f, 170f), true);
         CreateButton(canvas.transform, player, MobileControlButton.ControlType.Right, leftRightButtonSprite, ">", new Vector2(360f, 170f), new Vector2(170f, 170f), false);
@@ -230,7 +268,7 @@ public class BounceGameBootstrap : MonoBehaviour
 
         Image image = buttonObject.GetComponent<Image>();
         image.sprite = sprite;
-        image.color = new Color(1f, 1f, 1f, 0.85f);
+        image.color = new Color(1f, 1f, 1f, 0.65f);
         if (flipX)
         {
             image.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
@@ -241,6 +279,9 @@ public class BounceGameBootstrap : MonoBehaviour
 
         if (sprite == null)
         {
+            // Fallback: create a semi-transparent circle background with label
+            image.color = new Color(0f, 0f, 0f, 0.3f);
+
             GameObject textObject = new GameObject("Label", typeof(RectTransform), typeof(Text));
             textObject.transform.SetParent(buttonObject.transform, false);
 
@@ -337,7 +378,7 @@ public class BounceGameBootstrap : MonoBehaviour
             return;
         }
 
-        Sprite decorSprite = Sprite.Create(skyTreesTexture, new Rect(63f, 17f, 40f, 112f), new Vector2(0.5f, 0.05f), 100f);
+        Sprite decorSprite = CreateSpriteFromAtlas(skyTreesTexture, new Rect(63f, 17f, 40f, 112f), 100f, new Vector2(0.5f, 0.05f));
         CreateSpriteObject(objectName, decorSprite, position, size, Color.white, -1);
     }
 
@@ -423,14 +464,17 @@ public class BounceGameBootstrap : MonoBehaviour
         return texture;
     }
 
-    private Sprite CreateSpriteFromAtlas(Texture2D texture, Rect rect, float pixelsPerUnit)
+    private Sprite CreateSpriteFromAtlas(Texture2D texture, Rect rect, float pixelsPerUnit, Vector2? pivot = null)
     {
         if (texture == null)
         {
             return null;
         }
 
-        return Sprite.Create(texture, rect, new Vector2(0.5f, 0.5f), pixelsPerUnit);
+        float correctedY = texture.height - rect.y - rect.height;
+        Rect correctedRect = new Rect(rect.x, correctedY, rect.width, rect.height);
+        Vector2 actualPivot = pivot ?? new Vector2(0.5f, 0.5f);
+        return Sprite.Create(texture, correctedRect, actualPivot, pixelsPerUnit);
     }
 
     private Sprite CreateSolidSprite(int width, int height)

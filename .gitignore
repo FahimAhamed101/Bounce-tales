@@ -1,0 +1,52 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+
+# Asset meta data should only be ignored when the asset is ignored
+!/[Aa]ssets/**/*.meta
+
+# Uncomment if you wish to ignore the asset store tools plugin
+# Assets/AssetStoreTools*
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity generated files
+sysinfo.txt
+
+# Addressables
+ServerData/
+
+# Crash reports
+crashlytics-build.properties
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
